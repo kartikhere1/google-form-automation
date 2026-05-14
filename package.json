@@ -1,0 +1,32 @@
+{
+  "name": "google-form-automation",
+  "version": "1.0.0",
+  "description": "Automates Google Form and Google Sheets workflows using Google Apps Script and clasp.",
+  "main": "index.js",
+  "scripts": {
+    "login": "clasp login",
+    "logout": "clasp logout",
+    "clone": "clasp clone",
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "open": "clasp open",
+    "deploy": "clasp deploy",
+    "logs": "clasp logs"
+  },
+  "keywords": [
+    "google-apps-script",
+    "clasp",
+    "google-forms",
+    "google-sheets",
+    "automation",
+    "workflow"
+  ],
+  "author": "Your Name <your@email.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

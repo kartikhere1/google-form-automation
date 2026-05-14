@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Form Automation — Excel to Form Generator</title>
+  <meta name="description" content="Upload an Excel or CSV file and instantly generate a Google Form with all your questions. Built with Google Apps Script and clasp." />
+  <link rel="stylesheet" href="style.css" />
+  <!-- SheetJS for Excel (.xlsx) parsing -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      <div class="logo-text">Form<span>Gen</span></div>
+    </div>
+    <div class="header-badge">
+      <div class="badge-dot"></div>
+      Google Apps Script
+    </div>
+  </header>
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+    <h1>Turn your Excel into<br/>a Google Form instantly</h1>
+    <p>Upload a spreadsheet with your questions. Get a live preview and a ready-to-run Apps Script — no manual form building needed.</p>
+    <div class="steps-bar">
+      <div class="step-item"><div class="step-num">1</div> Upload Excel / CSV</div>
+      <div class="step-arrow">→</div>
+      <div class="step-item"><div class="step-num">2</div> Preview & Configure</div>
+      <div class="step-arrow">→</div>
+      <div class="step-item"><div class="step-num">3</div> Generate Script</div>
+      <div class="step-arrow">→</div>
+      <div class="step-item"><div class="step-num">4</div> Run in Apps Script</div>
+    </div>
+  </div>
+
+  <!-- ── MAIN GRID ── -->
+  <main>
+
+    <!-- ── LEFT: Upload + Config ── -->
+    <div>
+      <!-- Upload card -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title"><span class="icon">📁</span> Upload Questions File</div>
+
+        <div id="drop-zone">
+          <div class="drop-icon">☁️</div>
+          <div class="drop-title">Drag & drop your file here</div>
+          <div class="drop-sub">or click to browse</div>
+          <div class="drop-formats">
+            <span class="fmt-tag">CSV</span>
+            <span class="fmt-tag">XLSX</span>
+            <span class="fmt-tag">XLS</span>
+          </div>
+        </div>
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" />
+
+        <div id="file-info" style="display:none"></div>
+
+        <details style="margin-top:12px">
+          <summary style="font-size:13px;color:var(--muted);cursor:pointer;">📐 Required column format</summary>
+          <div style="margin-top:12px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border)">
+                  <th style="padding:8px;text-align:left;color:var(--purple2)">Col</th>
+                  <th style="padding:8px;text-align:left;color:var(--purple2)">Header</th>
+                  <th style="padding:8px;text-align:left;color:var(--purple2)">Example</th>
+                </tr>
+              </thead>
+              <tbody style="color:var(--muted)">
+                <tr><td style="padding:6px 8px">A</td><td>Question</td><td>What is your name?</td></tr>
+                <tr><td style="padding:6px 8px">B</td><td>Type</td><td>short_answer</td></tr>
+                <tr><td style="padding:6px 8px">C</td><td>Options</td><td>Red, Blue, Green</td></tr>
+                <tr><td style="padding:6px 8px">D</td><td>Required</td><td>TRUE</td></tr>
+                <tr><td style="padding:6px 8px">E</td><td>Help Text</td><td>Optional hint</td></tr>
+              </tbody>
+            </table>
+            <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+              <strong style="color:var(--text)">Supported types:</strong>
+              short_answer · paragraph · multiple_choice · checkbox · dropdown · linear_scale · date · time
+            </div>
+            <a href="data/sample_questions.csv" download
+               style="display:inline-block;margin-top:10px;font-size:12px;color:var(--purple2);text-decoration:none;">
+              ⬇️ Download template CSV
+            </a>
+          </div>
+        </details>
+      </div>
+
+      <!-- Config card -->
+      <div class="card">
+        <div class="card-title"><span class="icon">⚙️</span> Form Configuration</div>
+
+        <div class="field">
+          <label for="form-title">Form Title</label>
+          <input id="form-title" type="text" placeholder="My Survey Form" value="My Generated Form" />
+        </div>
+        <div class="field">
+          <label for="form-desc">Form Description</label>
+          <textarea id="form-desc" placeholder="Description shown at the top of your form..."></textarea>
+        </div>
+        <div class="field">
+          <label for="sheet-tab">Questions Sheet Tab Name</label>
+          <input id="sheet-tab" type="text" placeholder="Questions" value="Questions" />
+        </div>
+        <div class="field">
+          <label for="notify-email">Notification Email</label>
+          <input id="notify-email" type="email" placeholder="your@email.com" />
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            Send email when form is created
+            <small>Sends you the form link automatically</small>
+          </div>
+          <div class="toggle on" id="toggle-email"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            Collect respondent email addresses
+            <small>Adds an email field to the form</small>
+          </div>
+          <div class="toggle" id="toggle-collect"></div>
+        </div>
+
+        <button id="generate-btn" disabled>⚡ Generate Apps Script</button>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Live Preview ── -->
+    <div class="card">
+      <div class="card-title"><span class="icon">👁️</span> Live Form Preview</div>
+
+      <div id="preview-empty" class="preview-empty">
+        <div class="icon">📋</div>
+        <strong>No file uploaded yet</strong>
+        <p>Upload your CSV or Excel file to see a live preview of your Google Form here.</p>
+      </div>
+
+      <div id="preview-container">
+        <div class="preview-header">
+          <h2 id="preview-title">My Generated Form</h2>
+          <p id="preview-desc"></p>
+        </div>
+        <div class="preview-body">
+          <div id="preview-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STATS ROW ── -->
+    <div id="stats-row" style="display:none;grid-column:1/-1;display:none;">
+      <div class="stat-card">
+        <div class="stat-num" id="q-count">0</div>
+        <div class="stat-label">Total Questions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="type-count">0</div>
+        <div class="stat-label">Question Types</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="req-count">0</div>
+        <div class="stat-label">Required Fields</div>
+      </div>
+    </div>
+
+    <!-- ── OUTPUT SECTION ── -->
+    <div id="output-section" style="display:none;grid-column:1/-1;">
+      <div class="output-card">
+        <div class="output-tabs">
+          <button class="tab-btn active" data-tab="tab-code">📄 Generated Code.gs</button>
+          <button class="tab-btn" data-tab="tab-guide">🚀 How to Deploy</button>
+        </div>
+
+        <div class="tab-content active" id="tab-code">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+            Copy this code into your Google Apps Script editor, add your <strong style="color:var(--text)">Spreadsheet ID</strong>, then run <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--purple2)">generateForm()</code>.
+          </p>
+          <pre id="code-output"></pre>
+          <button class="copy-btn" id="copy-btn">📋 Copy to Clipboard</button>
+        </div>
+
+        <div class="tab-content" id="tab-guide">
+          <div class="step-guide">
+            <div class="guide-step">
+              <div class="guide-num">1</div>
+              <div class="guide-text">
+                <h4>Upload your Excel to Google Drive</h4>
+                <p>Go to <strong>drive.google.com</strong> → New → File upload. Then open it with Google Sheets. Copy the Spreadsheet ID from the URL.</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="guide-num">2</div>
+              <div class="guide-text">
+                <h4>Install clasp and push code</h4>
+                <p>Run <code>npm install</code> then <code>npm run login</code> to authenticate. Then <code>npm run push</code> to upload the script.</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="guide-num">3</div>
+              <div class="guide-text">
+                <h4>Paste your Spreadsheet ID</h4>
+                <p>In the generated code, replace <code>YOUR_SPREADSHEET_ID_HERE</code> with your actual Sheet ID.</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="guide-num">4</div>
+              <div class="guide-text">
+                <h4>Run generateForm()</h4>
+                <p>Open Apps Script editor (<code>npx clasp open</code>), select <code>generateForm</code>, click ▶ Run. Grant permissions when prompted.</p>
+              </div>
+            </div>
+            <div class="guide-step">
+              <div class="guide-num">5</div>
+              <div class="guide-text">
+                <h4>Get your form link</h4>
+                <p>Check the Execution Log for your shareable form link. You'll also receive an email if you enabled notifications.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    Built with ❤️ using Google Apps Script + clasp &nbsp;·&nbsp;
+    <a href="https://github.com/YOUR_USERNAME/google-form-automation" style="color:var(--purple2);text-decoration:none;">View on GitHub</a>
+  </footer>
+
+  <!-- ── TOAST ── -->
+  <div id="toast"></div>
+
+  <script src="app.js"></script>
+
+  <!-- Fix stats row display (CSS grid-column conflict) -->
+  <script>
+    const sr = document.getElementById('stats-row');
+    // Will be shown by app.js when file is loaded
+  </script>
+</body>
+</html>
