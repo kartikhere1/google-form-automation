@@ -1,0 +1,10 @@
+Question,Type,Options,Required,Help Text
+What is your full name?,short_answer,,TRUE,
+What is your email address?,short_answer,,TRUE,We will not share your email with anyone
+Which department are you in?,dropdown,"HR, Engineering, Sales, Marketing, Finance",TRUE,
+How did you hear about us?,multiple_choice,"Social Media, Friend / Referral, Search Engine, Event / Conference",FALSE,
+Select all areas of interest,checkbox,"Technology, Design, Business, Marketing, Operations",FALSE,Choose all that apply
+Rate your overall experience,linear_scale,"1, 5, Very Poor, Excellent",TRUE,1 = Very Poor and 5 = Excellent
+Any additional comments or suggestions?,paragraph,,FALSE,Optional — tell us anything you'd like us to know
+Date of your last interaction with us,date,,FALSE,
+Preferred contact time,time,,FALSE,

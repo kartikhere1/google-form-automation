@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FormGen — Bulk Import Responses into Google Forms</title>
+  <meta name="description" content="Upload an Excel file of existing responses and automatically import them into your Google Form using Apps Script." />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📥</div>
+      <div class="logo-text">Form<span>Gen</span></div>
+    </div>
+    <div class="header-badge">
+      <div class="badge-dot"></div>
+      Bulk Response Importer
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Bulk import Excel responses<br/>into your Google Form</h1>
+    <p>Upload your existing Excel response data, map the columns to your form questions, and get a ready-to-run Apps Script in seconds.</p>
+    <div class="steps-bar">
+      <div class="step-item"><div class="step-num">1</div> Upload Excel</div>
+      <div class="step-arrow">→</div>
+      <div class="step-item"><div class="step-num">2</div> Enter Form URL</div>
+      <div class="step-arrow">→</div>
+      <div class="step-item"><div class="step-num">3</div> Map Columns</div>
+      <div class="step-arrow">→</div>
+      <div class="step-item"><div class="step-num">4</div> Generate &amp; Run</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- ── ROW 1: Upload + Form Config ── -->
+    <div class="two-col">
+
+      <!-- LEFT: Upload -->
+      <div>
+        <div class="card">
+          <div class="card-title"><span>📁</span> Step 1 — Upload Response Excel</div>
+
+          <div id="drop-zone">
+            <div class="drop-icon">☁️</div>
+            <div class="drop-title">Drag &amp; drop your Excel or CSV here</div>
+            <div class="drop-sub">Your file should have column headers in row 1 and responses from row 2</div>
+            <div class="drop-formats">
+              <span class="fmt-tag">CSV</span>
+              <span class="fmt-tag">XLSX</span>
+              <span class="fmt-tag">XLS</span>
+            </div>
+          </div>
+          <input type="file" id="file-input" accept=".csv,.xlsx,.xls" />
+
+          <div id="file-success" class="file-success"></div>
+
+          <div id="stats-strip" class="stats-strip">
+            <div class="stat-pill">
+              <div class="num" id="stat-rows">0</div>
+              <div class="lbl">Responses Found</div>
+            </div>
+            <div class="stat-pill">
+              <div class="num" id="stat-cols">0</div>
+              <div class="lbl">Columns Detected</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Form Config -->
+      <div>
+        <div class="card">
+          <div class="card-title"><span>🔗</span> Step 2 — Connect Your Google Form</div>
+
+          <div class="field">
+            <label for="form-url">Google Form URL <span style="color:var(--red)">*</span></label>
+            <input id="form-url" type="url"
+              placeholder="https://docs.google.com/forms/d/e/..." />
+          </div>
+
+          <div class="field">
+            <label for="sheet-id">Response Spreadsheet ID <span style="color:var(--red)">*</span></label>
+            <input id="sheet-id" type="text" placeholder="Paste your Sheet ID from the URL" />
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-top:-8px;margin-bottom:14px;">
+            From: docs.google.com/spreadsheets/d/<strong style="color:var(--purple2)">THIS_PART</strong>/edit
+          </p>
+
+          <div class="field">
+            <label for="sheet-name">Sheet Tab Name</label>
+            <input id="sheet-name" type="text" placeholder="Sheet1" value="Sheet1" />
+          </div>
+
+          <!-- Validation summary -->
+          <div class="validation-box" id="val-box" style="display:none">
+            <div class="val-item">
+              <span class="val-icon">📊</span>
+              <div class="val-text">
+                <span id="val-responses">—</span>
+                <small>from uploaded file</small>
+              </div>
+            </div>
+            <div class="val-item">
+              <span class="val-icon">🗂️</span>
+              <div class="val-text">
+                <span id="val-mapped">—</span>
+                <small>column → question mappings</small>
+              </div>
+            </div>
+            <div class="val-item">
+              <span class="val-icon">⏭️</span>
+              <div class="val-text">
+                <span id="val-skipped" style="color:var(--muted)">—</span>
+                <small>unmapped columns</small>
+              </div>
+            </div>
+            <div class="val-item">
+              <span class="val-icon" id="val-form-icon">⚠️</span>
+              <div class="val-text">
+                Form URL
+                <small>required to generate script</small>
+              </div>
+            </div>
+            <div class="val-item">
+              <span class="val-icon" id="val-sheet-icon">⚠️</span>
+              <div class="val-text">
+                Spreadsheet ID
+                <small>required to generate script</small>
+              </div>
+            </div>
+          </div>
+
+          <button id="generate-btn" disabled>⚡ Generate Import Script</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROW 2: Column Mapper ── -->
+    <div id="mapper-section">
+      <div class="card">
+        <div class="mapper-header">
+          <div class="card-title" style="margin-bottom:0"><span>🗺️</span> Step 3 — Map Excel Columns → Form Questions</div>
+          <button class="auto-map-btn" id="auto-map-btn">✨ Auto-Map All</button>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+          For each Excel column, enter the <strong style="color:var(--text)">exact question title</strong> as it appears in your Google Form. Leave blank to skip that column.
+        </p>
+        <div id="col-map-list" class="col-map-list"></div>
+      </div>
+    </div>
+
+    <!-- ── ROW 3: Data Preview ── -->
+    <div id="preview-section">
+      <div class="card">
+        <div class="card-title"><span>👁️</span> Response Data Preview</div>
+        <div class="preview-table-wrap">
+          <table class="resp-table">
+            <thead id="preview-thead"></thead>
+            <tbody id="preview-tbody"></tbody>
+          </table>
+        </div>
+        <p class="preview-note" id="preview-more"></p>
+      </div>
+    </div>
+
+    <!-- ── OUTPUT ── -->
+    <div id="output-section">
+      <div class="output-card">
+        <div class="output-tabs">
+          <button class="tab-btn active" data-tab="tab-code">📄 Generated Code.gs</button>
+          <button class="tab-btn" data-tab="tab-guide">🚀 How to Run</button>
+        </div>
+
+        <div class="tab-content active" id="tab-code">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+            Copy this into your Google Apps Script editor. Fill in your Form URL and Sheet ID, then run
+            <code style="background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--purple2)">importResponses()</code>.
+          </p>
+          <pre id="code-output"></pre>
+          <div class="action-row">
+            <button class="copy-btn" id="copy-btn">📋 Copy to Clipboard</button>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-guide">
+          <div class="guide-step">
+            <div class="guide-num">1</div>
+            <div class="guide-text">
+              <h4>Upload your Excel to Google Drive</h4>
+              <p>Go to <strong>drive.google.com</strong> → New → File upload. Open with Google Sheets. Copy the Spreadsheet ID from the URL bar.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">2</div>
+            <div class="guide-text">
+              <h4>Open Google Apps Script</h4>
+              <p>Go to <strong>script.google.com</strong> → New project. Delete the default code. Paste the generated script.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">3</div>
+            <div class="guide-text">
+              <h4>Fill in your IDs</h4>
+              <p>Replace <code>PASTE_YOUR_GOOGLE_FORM_URL_HERE</code> and <code>PASTE_YOUR_SPREADSHEET_ID_HERE</code> with your actual values.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">4</div>
+            <div class="guide-text">
+              <h4>Run importResponses()</h4>
+              <p>Select <code>importResponses</code> from the dropdown, click ▶ Run. Accept permissions. Check the Execution log for results.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">5</div>
+            <div class="guide-text">
+              <h4>Verify in Google Forms</h4>
+              <p>Open your Google Form → Responses tab. All rows from the Excel should now appear as submitted responses.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-num">⚠️</div>
+            <div class="guide-text">
+              <h4>If you get "Invalid response" errors</h4>
+              <p>The answer value in your Excel must exactly match an option in the form (for multiple choice / dropdown questions). Check for typos or extra spaces.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    Built with ❤️ using Google Apps Script + clasp &nbsp;·&nbsp;
+    <a href="https://github.com/YOUR_USERNAME/google-form-automation"
+       style="color:var(--purple2);text-decoration:none;">View on GitHub</a>
+  </footer>
+
+  <div id="toast"></div>
+
+  <script src="app.js"></script>
+  <script>
+    // Show validation box once file is loaded
+    document.getElementById('file-input').addEventListener('change', function() {
+      document.getElementById('val-box').style.display = 'block';
+    });
+    document.getElementById('drop-zone').addEventListener('drop', function() {
+      setTimeout(() => document.getElementById('val-box').style.display = 'block', 200);
+    });
+  </script>
+</body>
+</html>
